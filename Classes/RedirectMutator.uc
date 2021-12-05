@@ -1,13 +1,15 @@
 class RedirectMutator extends ROMutator
-    dependson(OnlineGameSettings)
+    // dependson(OnlineGameSettings)
     config(Mutator_RedirectMutator);
 
+var RedirectMutatorConfig MutConfig;
+
 var array<string> MutatorsRunning;
-var array<PlayerResult> PlayersInGame;
-var string URL;
+// var array<PlayerResult> PlayersInGame;
 
 function PreBeginPlay()
 {
+    /*
     local int i;
     local string PlayerName;
     local PlayerResult PR;
@@ -20,7 +22,13 @@ function PreBeginPlay()
         PR.TimePlayed = Rand(3600);
         PlayersInGame.AddItem(PR);
     }
+    */
 
+    super.PreBeginPlay();
+
+    MutConfig = new(self) class'RedirectMutatorConfig';
+
+    SetAds();
     SetTimer(5.0, True, 'SetAds');
 
     `log("PreBeginPlay()",, 'RedirectMutator');
@@ -28,10 +36,28 @@ function PreBeginPlay()
 
 function PostBeginPlay()
 {
+    super.PostBeginPlay();
+
     SetAds();
     `log("PostBeginPlay()",, 'RedirectMutator');
 }
 
+function InitMutator(string Options, out string ErrorMessage)
+{
+    local string URLOpt;
+
+    URLOpt = class'GameInfo'.static.ParseOption(Options, "RedirectURL");
+    if (URLOpt != "")
+    {
+        `log("setting RedirectURL to " $ URLOpt,, 'RedirectMutator');
+        MutConfig.RedirectURL = URLOpt;
+        MutConfig.SaveConfig();
+    }
+
+    super.InitMutator(Options, ErrorMessage);
+}
+
+// Fake server advertisement data to attract players using quick match.
 function SetAds()
 {
     local ROGameInfo ROGI;
@@ -42,7 +68,7 @@ function SetAds()
     GameInterface = ROGI.GameInterface;
     GameSettings = ROOnlineGameSettingsCommon(GameInterface.GetGameSettings(ROGI.PlayerReplicationInfoClass.default.SessionName));
     GameSettings.bIsRanked = True;
-    GameSettings.PlayersInGame = PlayersInGame;
+    // GameSettings.PlayersInGame = PlayersInGame;
     GameSettings.MutatorsRunning = MutatorsRunning;
     GameSettings.PlayerRatio = 0.921875;
     GameSettings.bUsesArbitration = True;
@@ -51,7 +77,8 @@ function SetAds()
     GameSettings.SetRealismLevel(0);
     GameInterface.UpdateOnlineGame(ROGI.PlayerReplicationInfoClass.default.SessionName, GameSettings);
 
-    WorldInfo.Game.ProcessClientTravel(URL, GetPackageGuid('VNTE-Resort'), False, True);
+    // Probably not needed here, but do it anyway to send any possible "stragglers" on their way.
+    WorldInfo.Game.ProcessClientTravel(MutConfig.RedirectURL, GetPackageGuid('VNTE-Resort'), False, True);
 }
 
 function ProcessClientTravel(string DestURL)
@@ -71,11 +98,12 @@ function ProcessClientTravel(string DestURL)
 function NotifyLogin(Controller NewPlayer)
 {
     `log("NotifyLogin on: " $ NewPlayer,, 'RedirectMutator');
-    ProcessClientTravel(URL);
+    ProcessClientTravel(MutConfig.RedirectURL);
     SetAds();
+
+    super.NotifyLogin(NewPlayer);
 }
 
 DefaultProperties
 {
-    URL="145.239.205.39:7878"
 }
