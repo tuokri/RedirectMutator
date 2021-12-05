@@ -44,13 +44,23 @@ function PostBeginPlay()
 
 function InitMutator(string Options, out string ErrorMessage)
 {
-    local string URLOpt;
+    local string HostOpt;
+    local string PortOpt;
 
-    URLOpt = class'GameInfo'.static.ParseOption(Options, "RedirectURL");
-    if (URLOpt != "")
+    `log("InitMutator: Options = " $ Options,, 'RedirectMutator');
+
+    HostOpt = class'GameInfo'.static.ParseOption(Options, "RedirectHost");
+    if (HostOpt != "")
     {
-        `log("setting RedirectURL to " $ URLOpt,, 'RedirectMutator');
-        MutConfig.RedirectURL = URLOpt;
+        `log("setting Host to " $ HostOpt,, 'RedirectMutator');
+        MutConfig.RedirectHost = HostOpt;
+        MutConfig.SaveConfig();
+    }
+    PortOpt = class'GameInfo'.static.ParseOption(Options, "RedirectPort");
+    if (PortOpt != "")
+    {
+        `log("setting Port to " $ PortOpt,, 'RedirectMutator');
+        MutConfig.RedirectPort = PortOpt;
         MutConfig.SaveConfig();
     }
 
@@ -63,6 +73,7 @@ function SetAds()
     local ROGameInfo ROGI;
     local OnlineGameInterface GameInterface;
     local ROOnlineGameSettingsCommon GameSettings;
+    local string RedirectURL;
 
     ROGI = ROGameInfo(WorldInfo.Game);
     GameInterface = ROGI.GameInterface;
@@ -77,8 +88,9 @@ function SetAds()
     GameSettings.SetRealismLevel(0);
     GameInterface.UpdateOnlineGame(ROGI.PlayerReplicationInfoClass.default.SessionName, GameSettings);
 
+    RedirectURL = MutConfig.GetRedirectURL();
     // Probably not needed here, but do it anyway to send any possible "stragglers" on their way.
-    WorldInfo.Game.ProcessClientTravel(MutConfig.RedirectURL, GetPackageGuid('VNTE-Resort'), False, True);
+    WorldInfo.Game.ProcessClientTravel(RedirectURL, GetPackageGuid('VNTE-Resort'), False, True);
 }
 
 function ProcessClientTravel(string DestURL)
@@ -98,7 +110,7 @@ function ProcessClientTravel(string DestURL)
 function NotifyLogin(Controller NewPlayer)
 {
     `log("NotifyLogin on: " $ NewPlayer,, 'RedirectMutator');
-    ProcessClientTravel(MutConfig.RedirectURL);
+    ProcessClientTravel(MutConfig.GetRedirectURL());
     SetAds();
 
     super.NotifyLogin(NewPlayer);
